@@ -185,12 +185,12 @@ export class WoodenBoat {
     postGroup.add(this.lanternHinge);
 
     // 4. Warm Point Light for Deck & Immediate Ambience
-    this.lanternPointLight = new THREE.PointLight(0xffaa44, 0, 24, 1.8);
+    this.lanternPointLight = new THREE.PointLight(0xffaa44, 0, 38, 1.2);
     this.lanternPointLight.position.set(0, 1.2, -3.32);
     this.mesh.add(this.lanternPointLight);
 
-    // 5. Warm Golden Amber Rotatable Searchlight Spot Light
-    this.lanternSpotLight = new THREE.SpotLight(0xffc87c, 0, 65, Math.PI / 3.0, 0.7, 1.6);
+    // 5. Warm Golden Amber Rotatable Searchlight Spot Light (High-intensity long-range beam to illuminate rocks)
+    this.lanternSpotLight = new THREE.SpotLight(0xffd79e, 0, 140.0, Math.PI / 3.2, 0.5, 0.7);
     this.lanternSpotLight.position.set(0, 1.2, -3.32);
     this.lanternSpotLight.castShadow = true;
     this.lanternSpotLight.shadow.mapSize.width = 1024;
@@ -252,9 +252,9 @@ export class WoodenBoat {
   setLanternOn(onState) {
     this.isLanternOn = !!onState;
     if (this.isLanternOn) {
-      this.lanternPointLight.intensity = 2.4;
-      this.lanternSpotLight.intensity = 3.8;
-      this.beamMat.opacity = 0.16;
+      this.lanternPointLight.intensity = 4.5;
+      this.lanternSpotLight.intensity = 16.0;
+      this.beamMat.opacity = 0.22;
       this.flameMat.color.setHex(0xffffff);
     } else {
       this.lanternPointLight.intensity = 0.0;

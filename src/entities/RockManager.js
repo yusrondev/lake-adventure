@@ -8,6 +8,8 @@ export class RockManager {
 
     this.isLoaded = false;
     this.rockModel = null;
+    this.baseExtents = new THREE.Vector3(2.5, 2.5, 2.5);
+    this.baseCenter = new THREE.Vector3(0, 0, 0);
 
     // Active rocks map keyed by segment index -> array of rock objects
     this.activeSegmentRocks = new Map();
@@ -28,10 +30,21 @@ export class RockManager {
             child.receiveShadow = true;
             if (child.material) {
               child.material.flatShading = true;
+              if (child.material.roughness !== undefined) {
+                child.material.roughness = 0.65;
+                child.material.metalness = 0.15;
+              }
               child.material.needsUpdate = true;
             }
           }
         });
+
+        // Compute local 3D bounding box of base GLTF rock geometry
+        const box = new THREE.Box3().setFromObject(this.rockModel);
+        box.getSize(this.baseExtents);
+        box.getCenter(this.baseCenter);
+
+        if (this.baseExtents.x === 0) this.baseExtents.set(2.5, 2.5, 2.5);
 
         this.isLoaded = true;
       },
@@ -49,7 +62,8 @@ export class RockManager {
     const rockGeo = new THREE.DodecahedronGeometry(2.5, 1);
     const rockMat = new THREE.MeshStandardMaterial({
       color: 0x546e7a,
-      roughness: 0.85,
+      roughness: 0.65,
+      metalness: 0.15,
       flatShading: true
     });
     const mesh = new THREE.Mesh(rockGeo, rockMat);
@@ -57,6 +71,10 @@ export class RockManager {
     mesh.receiveShadow = true;
     group.add(mesh);
     this.rockModel = group;
+
+    const box = new THREE.Box3().setFromObject(this.rockModel);
+    box.getSize(this.baseExtents);
+    box.getCenter(this.baseCenter);
   }
 
   onSegmentCreated(segmentIndex, zCenter, segmentLength) {
@@ -81,9 +99,9 @@ export class RockManager {
 
     // Highly varied non-uniform sizes (Scale range 1.4x to 3.8x)
     const scaleBase = 1.4 + Math.random() * 2.4;
-    const scaleX = scaleBase * (0.85 + Math.random() * 0.3);
+    const scaleX = scaleBase * (0.85 + Math.random() * 0.35);
     const scaleY = scaleBase * (0.9 + Math.random() * 0.4);
-    const scaleZ = scaleBase * (0.85 + Math.random() * 0.3);
+    const scaleZ = scaleBase * (0.85 + Math.random() * 0.35);
 
     rockMesh.scale.set(scaleX, scaleY, scaleZ);
 
@@ -99,31 +117,54 @@ export class RockManager {
     );
 
     this.scene.add(rockMesh);
+    rockMesh.updateMatrixWorld(true);
+
+    const inverseMatrix = new THREE.Matrix4().copy(rockMesh.matrixWorld).invert();
+
+    // Calculate local 3D bounding box half-extents for this rock geometry
+    const halfExtents = new THREE.Vector3(
+      this.baseExtents.x * 0.5,
+      this.baseExtents.y * 0.5,
+      this.baseExtents.z * 0.5
+    );
 
     segmentRocks.push({
       mesh: rockMesh,
       x: rockX,
       z: rockZ,
-      radius: Math.max(scaleX, scaleZ) * 0.82 // Dynamic collision radius matching scale
+      matrixWorld: rockMesh.matrixWorld,
+      inverseMatrix: inverseMatrix,
+      halfExtents: halfExtents,
+      localCenter: this.baseCenter.clone(),
+      maxWorldRadius: Math.max(scaleX, scaleY, scaleZ) * 2.8
     });
 
     this.activeSegmentRocks.set(segmentIndex, segmentRocks);
   }
 
   createRockInstance() {
+    let instance;
     if (this.rockModel) {
-      return this.rockModel.clone(true);
+      instance = this.rockModel.clone(true);
+    } else {
+      const rockGeo = new THREE.DodecahedronGeometry(2.5, 1);
+      const rockMat = new THREE.MeshStandardMaterial({
+        color: 0x546e7a,
+        roughness: 0.65,
+        metalness: 0.15,
+        flatShading: true
+      });
+      instance = new THREE.Mesh(rockGeo, rockMat);
     }
-    const rockGeo = new THREE.DodecahedronGeometry(2.5, 1);
-    const rockMat = new THREE.MeshStandardMaterial({
-      color: 0x546e7a,
-      roughness: 0.85,
-      flatShading: true
+
+    instance.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
     });
-    const mesh = new THREE.Mesh(rockGeo, rockMat);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    return mesh;
+
+    return instance;
   }
 
   onSegmentDestroyed(segmentIndex) {
@@ -140,50 +181,106 @@ export class RockManager {
   }
 
   update(physics) {
-    if (!physics) return;
+    if (!physics || !physics.boat) return;
 
     const boatPos = physics.worldPosition;
-    const boatRadius = 1.6; // Boat contour width
+    const halfLength = physics.boat.length / 2;
+    const bowWidth = physics.boat.getHullHalfWidthAtZ(-halfLength * 0.9);
+    const midWidth = physics.boat.getHullHalfWidthAtZ(0);
+    const sternWidth = physics.boat.getHullHalfWidthAtZ(halfLength * 0.9);
+
+    // 7 key sampling points on 3D boat contour
+    const localHullPoints = [
+      new THREE.Vector3(0, 0, -halfLength),              // Bow tip
+      new THREE.Vector3(-bowWidth, 0, -halfLength * 0.7), // Bow Port
+      new THREE.Vector3(bowWidth, 0, -halfLength * 0.7),  // Bow Starboard
+      new THREE.Vector3(-midWidth, 0, 0),                 // Midship Port
+      new THREE.Vector3(midWidth, 0, 0),                  // Midship Starboard
+      new THREE.Vector3(-sternWidth, 0, halfLength * 0.85),// Stern Port
+      new THREE.Vector3(sternWidth, 0, halfLength * 0.85) // Stern Starboard
+    ];
+
+    const rotMatrix = new THREE.Euler(physics.pitch, physics.heading, -physics.roll, 'YXZ');
+    const worldHullPoints = localHullPoints.map((pt) =>
+      pt.clone().applyEuler(rotMatrix).add(boatPos)
+    );
+
+    const localPt = new THREE.Vector3();
+    const closestPt = new THREE.Vector3();
+    const localDiff = new THREE.Vector3();
+    const worldNormal = new THREE.Vector3();
 
     for (const [idx, rocks] of this.activeSegmentRocks.entries()) {
       for (const rock of rocks) {
+        // Broad phase cutoff: check distance to rock world position
         const dx = boatPos.x - rock.x;
         const dz = boatPos.z - rock.z;
-        const distSq = dx * dx + dz * dz;
-        const hitDist = rock.radius + boatRadius;
+        if (dx * dx + dz * dz > (rock.maxWorldRadius + 6.0) * (rock.maxWorldRadius + 6.0)) {
+          continue;
+        }
 
-        if (distSq < hitDist * hitDist) {
-          const dist = Math.sqrt(distSq) || 0.001;
-          const nx = dx / dist;
-          const nz = dz / dist;
+        // Narrow phase: 3D Oriented Bounding Geometry Check matching exact mesh orientation & scale
+        const minX = rock.localCenter.x - rock.halfExtents.x;
+        const maxX = rock.localCenter.x + rock.halfExtents.x;
+        const minY = rock.localCenter.y - rock.halfExtents.y;
+        const maxY = rock.localCenter.y + rock.halfExtents.y;
+        const minZ = rock.localCenter.z - rock.halfExtents.z;
+        const maxZ = rock.localCenter.z + rock.halfExtents.z;
 
-          // 1. HARD IMPENETRABLE COLLISION DISPLACEMENT (Boat physically cannot enter/pass through rock)
-          const overlap = hitDist - dist;
-          boatPos.x += nx * overlap;
-          boatPos.z += nz * overlap;
+        const boatMargin = 0.45; // Fitted margin matching rock 3D surface contour
 
-          // Clamp X to safe lake channel boundary
-          boatPos.x = THREE.MathUtils.clamp(
-            boatPos.x,
-            -physics.safeChannelLimit + 0.5,
-            physics.safeChannelLimit - 0.5
-          );
+        for (const worldPt of worldHullPoints) {
+          // Transform world hull point into local rock coordinate space
+          localPt.copy(worldPt).applyMatrix4(rock.inverseMatrix);
 
-          // 2. STOP SPEED & BOUNCE REFLECTION
-          physics.speed = Math.max(0, physics.speed * 0.2);
-          physics.turnSpeed = nx * 1.5;
+          // Find closest point on local rock box
+          closestPt.x = THREE.MathUtils.clamp(localPt.x, minX, maxX);
+          closestPt.y = THREE.MathUtils.clamp(localPt.y, minY, maxY);
+          closestPt.z = THREE.MathUtils.clamp(localPt.z, minZ, maxZ);
 
-          // 3. DAMAGE & FEEDBACK (Only trigger HP reduction when not in invulnerability frames)
-          if (physics.invulnerableTimer <= 0) {
-            physics.health = Math.max(0, physics.health - 20);
-            physics.invulnerableTimer = 0.8;
+          localDiff.subVectors(localPt, closestPt);
+          const distSq = localDiff.lengthSq();
 
-            if (this.game) {
-              this.game.triggerDamageFeedback();
-              if (physics.health <= 0) {
-                this.game.gameOver();
+          if (distSq < boatMargin * boatMargin || (localPt.x >= minX && localPt.x <= maxX && localPt.z >= minZ && localPt.z <= maxZ)) {
+            // EXACT CONTOUR COLLISION DETECTED!
+            const dist = Math.sqrt(distSq) || 0.001;
+            
+            if (distSq > 0.0001) {
+              worldNormal.copy(localDiff).normalize().transformDirection(rock.matrixWorld).normalize();
+            } else {
+              worldNormal.set(boatPos.x - rock.x, 0, boatPos.z - rock.z).normalize();
+            }
+
+            // 1. HARD IMPENETRABLE COLLISION DISPLACEMENT ALONG MESH CONTOUR
+            const overlap = Math.max(0.35, boatMargin - dist);
+            physics.worldPosition.x += worldNormal.x * overlap;
+            physics.worldPosition.z += worldNormal.z * overlap;
+
+            // Clamp X to safe channel boundary
+            physics.worldPosition.x = THREE.MathUtils.clamp(
+              physics.worldPosition.x,
+              -physics.safeChannelLimit + 0.5,
+              physics.safeChannelLimit - 0.5
+            );
+
+            // 2. STOP FORWARD SPEED & APPLY STEERING BOUNCE IMPULSE
+            physics.speed = Math.max(0, physics.speed * 0.15);
+            physics.turnSpeed = worldNormal.x * 1.8;
+
+            // 3. DAMAGE & FEEDBACK (Only trigger HP reduction when not in invulnerability frames)
+            if (physics.invulnerableTimer <= 0) {
+              physics.health = Math.max(0, physics.health - 20);
+              physics.invulnerableTimer = 0.8;
+
+              if (this.game) {
+                this.game.triggerDamageFeedback();
+                if (physics.health <= 0) {
+                  this.game.gameOver();
+                }
               }
             }
+
+            break; // Handled hit for this rock
           }
         }
       }

@@ -20,6 +20,7 @@ export class PlankPhysics {
     // Hydrodynamic parameters
     this.speed = 0;              
     this.maxSpeed = 16.0;        
+    this.maxReverseSpeed = 4.8; // ~17 km/h max reverse speed
     this.acceleration = 11.0;    
     this.brakingRate = 16.0;     
     this.drag = 1.2;             
@@ -108,19 +109,41 @@ export class PlankPhysics {
     this.heading += this.turnSpeed * delta;
     this.heading = THREE.MathUtils.clamp(this.heading, -this.maxHeadingAngle, this.maxHeadingAngle);
 
-    // 3. BASE CRUISING SPEED & ACCELERATION
+    // 3. BASE CRUISING SPEED, ACCELERATION & REVERSE DYNAMICS
     const baseCruisingSpeed = 3.6; // ~13 km/h
-    if (normZ < -0.15) {
-      const factor = Math.abs(normZ);
-      this.speed += (this.maxSpeed - this.speed) * factor * delta * 2.0;
-    } else if (normZ > 0.15) {
-      const factor = Math.abs(normZ);
-      this.speed -= this.brakingRate * factor * delta;
+    const factor = Math.abs(normZ);
+
+    if (normZ > 0.15) {
+      // Standing on back of deck (Holding Backward / S key / Joystick Down)
+      if (this.speed > 0) {
+        // Step 1: Brake forward speed down to 0
+        this.speed -= this.brakingRate * factor * delta;
+        if (this.speed < 0) this.speed = 0;
+      } else {
+        // Step 2: Once speed reaches 0, holding position accelerates boat in REVERSE!
+        this.speed -= this.acceleration * 0.45 * factor * delta;
+      }
+    } else if (normZ < -0.15) {
+      // Standing on front of deck (Holding Forward / W key / Joystick Up)
+      if (this.speed < 0) {
+        // Step 1: Brake reverse speed back to 0
+        this.speed += this.brakingRate * 1.5 * factor * delta;
+        if (this.speed > 0) this.speed = 0;
+      } else {
+        // Step 2: Accelerate forward
+        this.speed += (this.maxSpeed - this.speed) * factor * delta * 2.0;
+      }
     } else {
-      this.speed += (baseCruisingSpeed - this.speed) * delta * 1.5;
+      // Neutral deck position: return reverse speed to 0, or cruising speed if moving forward
+      if (this.speed < 0) {
+        this.speed += 6.0 * delta;
+        if (this.speed > 0) this.speed = 0;
+      } else {
+        this.speed += (baseCruisingSpeed - this.speed) * delta * 1.5;
+      }
     }
 
-    this.speed = THREE.MathUtils.clamp(this.speed, 0, this.maxSpeed);
+    this.speed = THREE.MathUtils.clamp(this.speed, -this.maxReverseSpeed, this.maxSpeed);
 
     // 4. WAVE BUOYANCY & TILT INTERACTION
     let waveY = 0;
@@ -212,7 +235,9 @@ export class PlankPhysics {
     const normX = this.playerLocalPos.x / 0.7;
     const normZ = this.playerLocalPos.y / 1.35;
 
-    if (normZ > 0.4) return "⏹️ Mengerem (Tumpuan Belakang)";
+    if (normZ > 0.4) {
+      return this.speed < -0.2 ? "⏪ Mundur (Tumpuan Belakang)" : "⏹️ Mengerem (Tumpuan Belakang)";
+    }
     if (normZ < -0.4) return "🚀 Maju (Tumpuan Depan)";
     if (normX < -0.25) return "↩️ Belok Kiri";
     if (normX > 0.25) return "↪️ Belok Kanan";

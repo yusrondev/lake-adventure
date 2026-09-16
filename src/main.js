@@ -437,10 +437,11 @@ class InfiniteLakeGame {
       }
 
       this.distanceTraveled = Math.max(this.distanceTraveled, -pPos.z);
-      const speedKmH = (this.physics.speed * 3.6).toFixed(1);
+      const speedKmH = (Math.abs(this.physics.speed) * 3.6).toFixed(1);
+      const isReverse = this.physics.speed < -0.15;
 
       if (this.distanceEl) this.distanceEl.innerHTML = `${Math.floor(this.distanceTraveled)} <small>m</small>`;
-      if (this.speedEl) this.speedEl.innerHTML = `${speedKmH} <small>km/h</small>`;
+      if (this.speedEl) this.speedEl.innerHTML = `${isReverse ? '⏪ ' : ''}${speedKmH} <small>km/h</small>`;
 
       // Proximity Trigger check for player character on deck near lantern post (x=0, z=-3.0)
       const playerPosOnDeck = this.physics.playerLocalPos;

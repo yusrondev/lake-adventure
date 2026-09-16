@@ -61,11 +61,11 @@ export class ChunkManager {
   checkBankCollision(playerX) {
     const safeLimit = 16.5;
     if (playerX < -safeLimit) {
-      return { collided: true, bounceDir: 1 };
+      return { collided: true, bounceDir: 1, penetration: -safeLimit - playerX };
     }
     if (playerX > safeLimit) {
-      return { collided: true, bounceDir: -1 };
+      return { collided: true, bounceDir: -1, penetration: playerX - safeLimit };
     }
-    return { collided: false, bounceDir: 0 };
+    return { collided: false, bounceDir: 0, penetration: 0 };
   }
 }

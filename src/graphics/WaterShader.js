@@ -119,10 +119,10 @@ export class WaterSystem {
             float cosAngle = dot(lDir, normalize(-uSpotLightDir));
             float cosCutoff = cos(uSpotLightAngle);
             
-            if (cosAngle > cosCutoff && dist < 65.0) {
+            if (cosAngle > cosCutoff && dist < 180.0) {
               float coneAtten = smoothstep(cosCutoff, cosCutoff + 0.16, cosAngle);
-              float normDist = clamp(dist / 65.0, 0.0, 1.0);
-              float distAtten = pow(1.0 - normDist, 2.2); // Soft quadratic falloff
+              float normDist = clamp(dist / 180.0, 0.0, 1.0);
+              float distAtten = pow(1.0 - normDist, 1.8); // Soft long-range quadratic falloff
               
               vec3 spotHalfVec = normalize(lDir + viewDir);
               float spotNdotH = max(0.0, dot(worldNormal, spotHalfVec));

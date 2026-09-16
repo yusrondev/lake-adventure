@@ -185,12 +185,12 @@ export class WoodenBoat {
     postGroup.add(this.lanternHinge);
 
     // 4. Warm Point Light for Deck & Immediate Ambience
-    this.lanternPointLight = new THREE.PointLight(0xffaa44, 0, 38, 1.2);
+    this.lanternPointLight = new THREE.PointLight(0xffaa44, 0, 55.0, 1.0);
     this.lanternPointLight.position.set(0, 1.2, -3.32);
     this.mesh.add(this.lanternPointLight);
 
     // 5. Warm Golden Amber Rotatable Searchlight Spot Light (High-intensity long-range beam to illuminate rocks)
-    this.lanternSpotLight = new THREE.SpotLight(0xffd79e, 0, 140.0, Math.PI / 3.2, 0.5, 0.7);
+    this.lanternSpotLight = new THREE.SpotLight(0xffd79e, 0, 220.0, Math.PI / 3.0, 0.5, 0.45);
     this.lanternSpotLight.position.set(0, 1.2, -3.32);
     this.lanternSpotLight.castShadow = true;
     this.lanternSpotLight.shadow.mapSize.width = 1024;
@@ -219,9 +219,9 @@ export class WoodenBoat {
     bCtx.fill();
 
     const beamTexture = new THREE.CanvasTexture(beamCanvas);
-    const beamGeo = new THREE.PlaneGeometry(14.0, 32.0);
+    const beamGeo = new THREE.PlaneGeometry(16.0, 42.0);
     beamGeo.rotateX(-Math.PI / 2);
-    beamGeo.translate(0, 0, -16.0);
+    beamGeo.translate(0, 0, -21.0);
 
     this.beamMat = new THREE.MeshBasicMaterial({
       map: beamTexture,
@@ -252,9 +252,9 @@ export class WoodenBoat {
   setLanternOn(onState) {
     this.isLanternOn = !!onState;
     if (this.isLanternOn) {
-      this.lanternPointLight.intensity = 4.5;
-      this.lanternSpotLight.intensity = 16.0;
-      this.beamMat.opacity = 0.22;
+      this.lanternPointLight.intensity = 8.0;
+      this.lanternSpotLight.intensity = 42.0;
+      this.beamMat.opacity = 0.28;
       this.flameMat.color.setHex(0xffffff);
     } else {
       this.lanternPointLight.intensity = 0.0;
@@ -310,7 +310,7 @@ export class WoodenBoat {
 
         waterMaterial.uniforms.uSpotLightPos.value.copy(spotWorldPos);
         waterMaterial.uniforms.uSpotLightDir.value.copy(spotWorldDir);
-        waterMaterial.uniforms.uSpotLightIntensity.value = 0.45;
+        waterMaterial.uniforms.uSpotLightIntensity.value = 0.95;
         waterMaterial.uniforms.uSpotLightAngle.value = Math.PI / 3.0;
       } else {
         waterMaterial.uniforms.uSpotLightIntensity.value = 0.0;

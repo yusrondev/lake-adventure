@@ -78,14 +78,14 @@ class InfiniteLakeGame {
     this.scene.background = new THREE.Color(0x60a5fa);
     this.scene.fog = new THREE.FogExp2(0x60a5fa, 0.007);
 
-    // Farther camera POV as requested (7.5 height, 15.0 distance back)
+    // Wide perspective camera POV (68 degree FOV, 9.5 height, 18.0 distance back)
     this.camera = new THREE.PerspectiveCamera(
-      58,
+      68,
       window.innerWidth / window.innerHeight,
       0.1,
       600
     );
-    this.camera.position.set(0, 7.5, 15.0);
+    this.camera.position.set(0, 9.5, 18.0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -427,7 +427,7 @@ class InfiniteLakeGame {
 
       const collision = this.physics.check3DHullShoreCollision(this.chunkManager);
       if (collision.collided) {
-        const hit = this.physics.handleCollision(collision.bounceDir);
+        const hit = this.physics.handleCollision(collision.bounceDir, collision.penetration);
         if (hit) {
           this.triggerDamageFeedback();
           if (this.physics.health <= 0) {
@@ -457,8 +457,8 @@ class InfiniteLakeGame {
         if (this.lanternAimBar) this.lanternAimBar.classList.add('hidden');
       }
 
-      // Zero-GC Camera Tracking (Farther POV: Vector3(0, 7.5, 15.0))
-      this.tempCamOffset.set(0, 7.5, 15.0);
+      // Zero-GC Camera Tracking (Wide POV: Vector3(0, 9.5, 18.0))
+      this.tempCamOffset.set(0, 9.5, 18.0);
       this.tempCamOffset.applyAxisAngle(this.upAxis, this.physics.heading * 0.15);
 
       this.targetCamPos.copy(pPos).add(this.tempCamOffset);
@@ -472,7 +472,7 @@ class InfiniteLakeGame {
 
       this.camera.position.lerp(this.targetCamPos, 1.0 - Math.exp(-8.0 * delta));
       
-      this.lookAtPos.set(0, 1.2, -5.0);
+      this.lookAtPos.set(0, 1.5, -9.0);
       this.lookAtPos.applyAxisAngle(this.upAxis, this.physics.heading * 0.15);
       this.lookAtPos.add(pPos);
       this.camera.lookAt(this.lookAtPos);

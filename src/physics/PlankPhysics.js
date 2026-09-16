@@ -216,19 +216,34 @@ export class PlankPhysics {
     return { collided: false, bounceDir: 0 };
   }
 
-  handleCollision(bounceDirection) {
-    if (this.invulnerableTimer > 0) return false;
+  handleCollision(bounceDirection, penetration = 0.5) {
+    const isInitialHit = (this.invulnerableTimer <= 0);
 
-    this.health = Math.max(0, this.health - 20);
-    this.invulnerableTimer = 0.7;
+    if (isInitialHit) {
+      this.health = Math.max(0, this.health - 20);
+      this.invulnerableTimer = 0.7;
+    }
 
-    this.speed = Math.max(3.0, this.speed * 0.4);
-    this.heading = bounceDirection * 0.4;
-    this.turnSpeed = bounceDirection * 1.8;
-    this.worldPosition.x += bounceDirection * 1.5;
-    this.worldPosition.x = THREE.MathUtils.clamp(this.worldPosition.x, -this.safeChannelLimit + 0.5, this.safeChannelLimit - 0.5);
+    // Smooth physical separation force (No hard teleporting steps, no visual glitching!)
+    const pushAmount = Math.max(0.08, (penetration || 0.4) * 0.35);
+    this.worldPosition.x += bounceDirection * pushAmount;
+    this.worldPosition.x = THREE.MathUtils.clamp(
+      this.worldPosition.x,
+      -this.safeChannelLimit + 0.2,
+      this.safeChannelLimit - 0.2
+    );
 
-    return true;
+    // Smoothly redirect turn rate & heading towards open water in a curved arc
+    this.turnSpeed = THREE.MathUtils.lerp(this.turnSpeed, bounceDirection * 0.85, 0.25);
+    this.heading = THREE.MathUtils.lerp(this.heading, bounceDirection * 0.18, 0.2);
+
+    // Smooth natural water resistance deceleration
+    this.speed = Math.max(1.5, this.speed * 0.92);
+
+    // Smooth visual roll banking response upon impact
+    this.roll = THREE.MathUtils.lerp(this.roll, -bounceDirection * 0.22, 0.3);
+
+    return isInitialHit;
   }
 
   getStatusText() {

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Infinite Lake Adventure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- HUD Overlay -->
+  <div id="hud-overlay">
+    <!-- Top Bar: Compact Single-Row Icon HUD -->
+    <div class="hud-top-bar">
+      <div class="hud-compact-ribbon">
+        <!-- Durability Health Pill -->
+        <div class="hud-pill hud-hp-pill">
+          <div class="hp-row">
+            <span class="hud-icon">🪵</span>
+            <span id="hp-val" class="hp-text">100%</span>
+          </div>
+          <div class="hp-bar-container">
+            <div id="hp-bar-fill" class="hp-bar-fill"></div>
+          </div>
+        </div>
+
+        <div class="hud-divider"></div>
+
+        <!-- Compass Direction Badge -->
+        <div class="hud-pill">
+          <span id="compass-val" class="compass-text">🧭 N</span>
+        </div>
+
+        <div class="hud-divider"></div>
+
+        <!-- Distance -->
+        <div class="hud-pill">
+          <span class="hud-icon">📍</span>
+          <span id="distance-val" class="hud-pill-val">0<small>m</small></span>
+        </div>
+
+        <div class="hud-divider"></div>
+
+        <!-- Speed -->
+        <div class="hud-pill">
+          <span class="hud-icon">⚡</span>
+          <span id="speed-val" class="hud-pill-val">0.0<small>km/h</small></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Lantern Action & 360 Degree Aim Controls -->
+    <div id="lantern-hud-container" class="lantern-hud-container">
+      <button id="btn-lantern-toggle" class="lantern-btn hidden">💡 Nyalakan Lampu</button>
+      
+      <div id="lantern-aim-bar" class="lantern-aim-bar hidden">
+        <button id="btn-aim-left" class="aim-btn">↶ Putar Kiri</button>
+        <button id="btn-aim-front" class="aim-btn active">🎯 Depan</button>
+        <button id="btn-aim-right" class="aim-btn">↷ Putar Kanan</button>
+      </div>
+    </div>
+
+    <!-- Bottom Controls Area -->
+    <div class="hud-bottom-area">
+      <!-- On-Screen Virtual Touch Joystick (Bottom-Left) -->
+      <div id="joystick-container" class="joystick-container">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-stick" class="joystick-stick"></div>
+        </div>
+      </div>
+
+      <!-- Keyboard Hint (Bottom-Right/Center for Desktop) -->
+      <div class="hud-controls-hint">
+        <div class="key-hint"><kbd>W</kbd>/<kbd>↑</kbd> Maju</div>
+        <div class="key-hint"><kbd>A</kbd>/<kbd>←</kbd> Kiri</div>
+        <div class="key-hint"><kbd>S</kbd>/<kbd>↓</kbd> Rem</div>
+        <div class="key-hint"><kbd>D</kbd>/<kbd>→</kbd> Kanan</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start & Game Over Screen Modal -->
+  <div id="modal-screen" class="modal-overlay">
+    <div class="modal-card">
+      <h1 class="modal-title">INFINITE LAKE ADVENTURE</h1>
+      <p class="modal-subtitle">Jelajahi danau tanpa batas dengan perahu kayu Low Poly!</p>
+      <button id="btn-start" class="btn-primary">Mulai Mengarungi Danau</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

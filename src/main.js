@@ -5,6 +5,7 @@ import { WoodenBoat } from './entities/WoodenBoat.js';
 import { PlankPhysics } from './physics/PlankPhysics.js';
 import { ChunkManager } from './world/ChunkManager.js';
 import { DayNightCycle } from './graphics/DayNightCycle.js';
+import { OrcaWhaleManager } from './entities/OrcaWhale.js';
 
 class InfiniteLakeGame {
   constructor() {
@@ -20,6 +21,8 @@ class InfiniteLakeGame {
     this.hpFillEl = document.getElementById('hp-bar-fill');
     this.modalScreen = document.getElementById('modal-screen');
     this.btnStart = document.getElementById('btn-start');
+    this.loadingFillEl = document.getElementById('loading-bar-fill');
+    this.loadingTextEl = document.getElementById('loading-text');
 
     // Joystick UI Elements
     this.joystickBase = document.getElementById('joystick-base');
@@ -123,6 +126,20 @@ class InfiniteLakeGame {
     
     // Dynamic Day-Night Celestial Cycle with giant glowing sun & water lighting sync
     this.dayNightCycle = new DayNightCycle(this.scene, this.sunLight, this.camera, this.waterSystem.material);
+
+    // Orca Whale Attack System with Preloader
+    this.orcaWhale = new OrcaWhaleManager(this.scene, this);
+    this.orcaWhale.preloadAsset(
+      (percent) => {
+        if (this.loadingFillEl) this.loadingFillEl.style.width = `${percent}%`;
+        if (this.loadingTextEl) this.loadingTextEl.textContent = `Memuat Asset Paus Orca 3D... ${percent}%`;
+      },
+      () => {
+        if (this.loadingFillEl) this.loadingFillEl.style.width = `100%`;
+        if (this.loadingTextEl) this.loadingTextEl.textContent = `Siap Mengarungi Danau!`;
+        if (this.btnStart) this.btnStart.disabled = false;
+      }
+    );
   }
 
   setupEvents() {
@@ -408,6 +425,11 @@ class InfiniteLakeGame {
 
       // Update Dynamic Day-Night Celestial Cycle
       this.dayNightCycle.update(pPos, delta);
+
+      // Update Orca Whale Breach Attack Mechanics
+      if (this.orcaWhale) {
+        this.orcaWhale.update(delta, this.physics);
+      }
 
       // Update Boat Compass Direction Badge
       if (this.compassEl) {

@@ -5,6 +5,7 @@ import { WoodenBoat } from './entities/WoodenBoat.js';
 import { PlankPhysics } from './physics/PlankPhysics.js';
 import { ChunkManager } from './world/ChunkManager.js';
 import { DayNightCycle } from './graphics/DayNightCycle.js';
+import { RockManager } from './entities/RockManager.js';
 
 class InfiniteLakeGame {
   constructor() {
@@ -120,6 +121,10 @@ class InfiniteLakeGame {
     this.physics = new PlankPhysics(this.woodenBoat, this.humanoid, this.waterSystem);
 
     this.chunkManager = new ChunkManager(this.scene, this.waterSystem.material);
+
+    // Lake Rock Obstacle Manager (stylized_low-poly_stone.glb)
+    this.rockManager = new RockManager(this.scene, this);
+    this.chunkManager.setRockManager(this.rockManager);
     
     // Dynamic Day-Night Celestial Cycle with giant glowing sun & water lighting sync
     this.dayNightCycle = new DayNightCycle(this.scene, this.sunLight, this.camera, this.waterSystem.material);
@@ -413,6 +418,11 @@ class InfiniteLakeGame {
       if (this.compassEl) {
         const deg = Math.round(this.physics.heading * 180 / Math.PI);
         this.compassEl.textContent = `🧭 ${deg}°`;
+      }
+
+      // Check collisions with Lake Rock Obstacles (20% HP reduction & bounce feedback)
+      if (this.rockManager) {
+        this.rockManager.update(this.physics);
       }
 
       const collision = this.physics.check3DHullShoreCollision(this.chunkManager);

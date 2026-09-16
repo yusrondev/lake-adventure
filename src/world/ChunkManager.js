@@ -1,9 +1,10 @@
 import { TerrainSegment } from './TerrainSegment.js';
 
 export class ChunkManager {
-  constructor(scene, waterMaterial) {
+  constructor(scene, waterMaterial, rockManager = null) {
     this.scene = scene;
     this.waterMaterial = waterMaterial;
+    this.rockManager = rockManager;
 
     this.segmentLength = 80;
     this.visibleSegmentsAhead = 4;
@@ -12,6 +13,10 @@ export class ChunkManager {
 
     this.activeSegments = new Map();
     this.currentChunkIndex = 0;
+  }
+
+  setRockManager(rockManager) {
+    this.rockManager = rockManager;
   }
 
   update(playerZ) {
@@ -33,6 +38,10 @@ export class ChunkManager {
           this.channelWidth
         );
         this.activeSegments.set(idx, segment);
+
+        if (this.rockManager) {
+          this.rockManager.onSegmentCreated(idx, zPos, this.segmentLength);
+        }
       }
     }
 
@@ -41,6 +50,10 @@ export class ChunkManager {
       if (idx < minIndex || idx > maxIndex) {
         segment.destroy();
         this.activeSegments.delete(idx);
+
+        if (this.rockManager) {
+          this.rockManager.onSegmentDestroyed(idx);
+        }
       }
     }
   }
